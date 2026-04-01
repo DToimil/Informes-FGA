@@ -3,7 +3,6 @@ import ast
 import docx
 import re
 import os
-import convertapi
 
 def eliminar_fila(row):
     tr = row._tr
@@ -114,35 +113,21 @@ def generar_archivos(datos_dict):
     nombre_competicion = datos_dict.get("{{COMPETICION}}", "Competicion")
     nombre_limpio = nombre_competicion.replace("/", "-").replace("\\", "-")
     nombre_docx = f"DR {nombre_limpio}.docx"
-    nombre_pdf = f"DR {nombre_limpio}.pdf"
     
-    # 1. Guardamos el Word
+    # Guardamos el Word y terminamos
     doc.save(nombre_docx)
-    
-    # 2. MOTOR DE PDF OFICIAL DE MICROSOFT (Vía ConvertAPI)
-    # 2. MOTOR DE PDF OFICIAL DE MICROSOFT (Vía ConvertAPI)
-    # 2. MOTOR DE PDF OFICIAL DE MICROSOFT (Vía ConvertAPI)
-    try:
-        # ¡LA PALABRA MÁGICA CORRECTA ES api_credentials!
-        convertapi.api_credentials = "ZVS50DmUx2KI49EYpLNXXW4AS7FscH21"
-        
-        result = convertapi.convert('pdf', { 'File': nombre_docx }, from_format='docx')
-        result.file.save(nombre_pdf)
-    except Exception as e:
-        st.error(f"Error generando PDF con ConvertAPI: {e}")
-    
-    return nombre_docx, nombre_pdf
+    return nombre_docx
 
 
 # --- INTERFAZ WEB ---
 st.set_page_config(page_title="Actas FGA", page_icon="📝")
 
 st.title("📝 Generador de Actas FGA")
-st.write("Pega el diccionario de datos generado por tu Gem y pulsa Generar.")
+st.write("Pega el diccionario de datos generado por tu Gem y pulsa Generar para obtener el documento de Word.")
 
 codigo_pegado = st.text_area("Pega aquí el código (datos = {...}):", height=250)
 
-if st.button("Generar Documentos", type="primary"):
+if st.button("Generar Acta (Word)", type="primary"):
     if codigo_pegado:
         try:
             texto_limpio = codigo_pegado.replace("```python", "").replace("```", "")
@@ -151,19 +136,19 @@ if st.button("Generar Documentos", type="primary"):
             
             datos_diccionario = ast.literal_eval(texto_limpio)
             
-            with st.spinner('Creando Word y convirtiendo a PDF perfecto...'):
-                docx_file, pdf_file = generar_archivos(datos_diccionario)
+            with st.spinner('Ensamblando el Word...'):
+                docx_file = generar_archivos(datos_diccionario)
             
-            st.success("¡Documentos listos!")
+            st.success("¡Documento de Word generado con éxito!")
             
-            col1, col2 = st.columns(2)
-            with col1:
-                with open(docx_file, "rb") as file:
-                    st.download_button("📥 Descargar Word", data=file, file_name=docx_file, mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document")
-            with col2:
-                if os.path.exists(pdf_file):
-                    with open(pdf_file, "rb") as file:
-                        st.download_button("📥 Descargar PDF", data=file, file_name=pdf_file, mime="application/pdf")
+            with open(docx_file, "rb") as file:
+                st.download_button(
+                    label="📥 Descargar Word (.docx)", 
+                    data=file, 
+                    file_name=docx_file, 
+                    mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+                    use_container_width=True
+                )
                 
         except Exception as e:
             st.error(f"Error al leer los datos. Asegúrate de que copiaste bien el diccionario. Detalle: {e}")
