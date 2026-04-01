@@ -3,7 +3,7 @@ import ast
 import docx
 import re
 import os
-import subprocess
+import convertapi
 
 def eliminar_fila(row):
     tr = row._tr
@@ -116,13 +116,21 @@ def generar_archivos(datos_dict):
     nombre_docx = f"DR {nombre_limpio}.docx"
     nombre_pdf = f"DR {nombre_limpio}.pdf"
     
+    # 1. Guardamos el Word
     doc.save(nombre_docx)
     
-    # MOTOR DE PDF PARA LA NUBE (LibreOffice)
+    # 2. MOTOR DE PDF OFICIAL DE MICROSOFT (Vía ConvertAPI)
     try:
-        subprocess.run(['libreoffice', '--headless', '--convert-to', 'pdf', nombre_docx], check=True)
+        # Cogemos la llave maestra de la caja fuerte de Streamlit
+        convertapi.api_secret = st.secrets["CONVERTAPI_SECRET"]
+        
+        # Le decimos que convierta el Word a PDF
+        result = convertapi.convert('pdf', { 'File': nombre_docx }, from_format='docx')
+        
+        # Guardamos el PDF descargado
+        result.file.save(nombre_pdf)
     except Exception as e:
-        st.error(f"Error generando PDF: {e}")
+        st.error(f"Error generando PDF con ConvertAPI: {e}")
     
     return nombre_docx, nombre_pdf
 
@@ -144,7 +152,7 @@ if st.button("Generar Documentos", type="primary"):
             
             datos_diccionario = ast.literal_eval(texto_limpio)
             
-            with st.spinner('Creando Word y convirtiendo a PDF (puede tardar unos segundos)...'):
+            with st.spinner('Creando Word y convirtiendo a PDF perfecto...'):
                 docx_file, pdf_file = generar_archivos(datos_diccionario)
             
             st.success("¡Documentos listos!")
