@@ -121,9 +121,10 @@ def generar_archivos(datos_dict):
     
     # 2. MOTOR DE PDF OFICIAL DE MICROSOFT (Vía ConvertAPI)
     # 2. MOTOR DE PDF OFICIAL DE MICROSOFT (Vía ConvertAPI)
+    # 2. MOTOR DE PDF OFICIAL DE MICROSOFT (Vía ConvertAPI)
     try:
-        # Ponemos la contraseña DIRECTAMENTE aquí, sin cajas fuertes
-        convertapi.api_secret = "ZVS50DmUx2KI49EYpLNXXW4AS7FscH21"
+        # ¡LA PALABRA MÁGICA CORRECTA ES api_credentials!
+        convertapi.api_credentials = "ZVS50DmUx2KI49EYpLNXXW4AS7FscH21"
         
         result = convertapi.convert('pdf', { 'File': nombre_docx }, from_format='docx')
         result.file.save(nombre_pdf)
