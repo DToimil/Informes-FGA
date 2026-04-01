@@ -121,7 +121,13 @@ def generar_archivos(datos_dict):
     doc.save(nombre_docx)
     
     # 2. MOTOR DE PDF OFICIAL DE MICROSOFT (Vía ConvertAPI)
+    # 2. MOTOR DE PDF OFICIAL DE MICROSOFT (Vía ConvertAPI)
     try:
+        # CHIVATO DE SEGURIDAD
+        if "CONVERTAPI_SECRET" not in st.secrets:
+            st.error("❌ OJO: No encuentro la contraseña en la caja fuerte de Streamlit.")
+            return nombre_docx, None # Devuelve solo el Word para que no explote
+            
         convertapi.api_secret = str(st.secrets["CONVERTAPI_SECRET"])
         result = convertapi.convert('pdf', { 'File': nombre_docx })
         result.file.save(nombre_pdf)
