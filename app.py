@@ -129,7 +129,7 @@ def generar_archivos(datos_dict):
             return nombre_docx, None # Devuelve solo el Word para que no explote
             
         convertapi.api_secret = str(st.secrets["CONVERTAPI_SECRET"])
-        result = convertapi.convert('pdf', { 'File': nombre_docx })
+        result = convertapi.convert('pdf', { 'File': nombre_docx }, from_format='docx')
         result.file.save(nombre_pdf)
     except Exception as e:
         st.error(f"Error generando PDF con ConvertAPI: {e}")
