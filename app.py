@@ -36,6 +36,7 @@ def reemplazar_manteniendo_formato_estricto(parrafo, datos):
     if 'color' in formato: nuevo_run.font.color.rgb = formato['color']
 
 def generar_archivos(datos_dict):
+    # ¡AQUÍ ESTÁ EL NOMBRE DE TU PLANTILLA CORREGIDO!
     doc = docx.Document("DR_PISTA_Plantilla_Maestra_Etiquetas.docx")
     
     for parrafo in doc.paragraphs:
@@ -121,13 +122,8 @@ def generar_archivos(datos_dict):
     
     # 2. MOTOR DE PDF OFICIAL DE MICROSOFT (Vía ConvertAPI)
     try:
-        # Cogemos la llave maestra de la caja fuerte de Streamlit
-        convertapi.api_secret = st.secrets["CONVERTAPI_SECRET"]
-        
-        # Le decimos que convierta el Word a PDF
-        result = convertapi.convert('pdf', { 'File': nombre_docx }, from_format='docx')
-        
-        # Guardamos el PDF descargado
+        convertapi.api_secret = str(st.secrets["CONVERTAPI_SECRET"])
+        result = convertapi.convert('pdf', { 'File': nombre_docx })
         result.file.save(nombre_pdf)
     except Exception as e:
         st.error(f"Error generando PDF con ConvertAPI: {e}")
