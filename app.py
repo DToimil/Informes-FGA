@@ -120,14 +120,12 @@ def generar_archivos(datos_dict):
     doc.save(nombre_docx)
     
     # 2. MOTOR DE PDF OFICIAL DE MICROSOFT (Vía ConvertAPI)
+    # 2. MOTOR DE PDF OFICIAL DE MICROSOFT (Vía ConvertAPI)
     try:
-        # Obtenemos la contraseña de Streamlit
-        convertapi.api_secret = st.secrets["CONVERTAPI_SECRET"]
+        # Ponemos la contraseña DIRECTAMENTE aquí, sin cajas fuertes
+        convertapi.api_secret = "ZVS50DmUx2KI49EYpLNXXW4AS7FscH21"
         
-        # ¡AQUÍ ESTÁ EL ARREGLO! (from_format='docx')
         result = convertapi.convert('pdf', { 'File': nombre_docx }, from_format='docx')
-        
-        # Guardamos el PDF descargado
         result.file.save(nombre_pdf)
     except Exception as e:
         st.error(f"Error generando PDF con ConvertAPI: {e}")
