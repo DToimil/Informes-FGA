@@ -289,6 +289,5 @@ if st.button("Generar Acta"):
                     file_name=archivo_generado,
                     mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document"
                 )
-                
         except Exception as e:
             st.error(f"Ocurrió un error: {e}")
