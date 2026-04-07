@@ -43,7 +43,7 @@ def reemplazar_manteniendo_formato_estricto(parrafo, datos):
 
 
 def generar_acta_final():
-    doc = docx.Document("Plantilla_Maestra_Etiquetas.docx")
+    doc = docx.Document("DR_PISTA_Plantilla_Maestra_Etiquetas.docx")
     
     # Este es el diccionario que te escupe el Gem (sin llaves, no pasa nada)
     datos_brutos = {
