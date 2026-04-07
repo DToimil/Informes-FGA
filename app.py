@@ -1,5 +1,7 @@
+import streamlit as st
 import docx
 import re
+import os
 
 def eliminar_fila(row):
     """Elimina la fila limpiamente desde el código XML de Word."""
@@ -257,3 +259,36 @@ def generar_acta_final():
 
 if __name__ == "__main__":
     generar_acta_final()
+
+
+
+
+# ==========================================
+# INTERFAZ WEB DE STREAMLIT (Lo que tú ves)
+# ==========================================
+
+# 1. Título de la página
+st.title("Generador de Actas FGA 📝")
+st.write("Haz clic en el botón de abajo para procesar los datos y generar el documento.")
+
+# 2. Creamos un botón. Todo lo que esté indentado debajo ocurrirá al pulsarlo.
+if st.button("Generar Acta"):
+    
+    with st.spinner("Generando documento, por favor espera..."):
+        try:
+            # Llamamos a tu función mágica
+            archivo_generado = generar_acta_final()
+            
+            st.success("¡Acta generada con éxito!")
+            
+            # 3. Creamos el botón de descarga para que te baje el Word a tu ordenador
+            with open(archivo_generado, "rb") as file:
+                st.download_button(
+                    label="📥 Descargar Acta en Word",
+                    data=file,
+                    file_name=archivo_generado,
+                    mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+                )
+                
+        except Exception as e:
+            st.error(f"Ocurrió un error: {e}")
