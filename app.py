@@ -1,6 +1,5 @@
 import docx
 import re
-from docx2pdf import convert
 
 def eliminar_fila(row):
     """Elimina la fila limpiamente desde el código XML de Word."""
@@ -255,13 +254,6 @@ def generar_acta_final():
     
     doc.save(nombre_docx)
     print(f"✅ Archivo Word generado: {nombre_docx}")
-    
-    try:
-        print("⏳ Convirtiendo a PDF...")
-        convert(nombre_docx, nombre_pdf)
-        print(f"✅ ¡PDF Perfecto Generado!: {nombre_pdf}")
-    except Exception as e:
-        print(f"❌ Error al generar el PDF: {e}")
 
 if __name__ == "__main__":
     generar_acta_final()
