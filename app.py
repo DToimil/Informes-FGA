@@ -2,6 +2,7 @@ import streamlit as st
 import docx
 import re
 import os
+import ast
 
 def eliminar_fila(row):
     """Elimina la fila limpiamente desde el código XML de Word."""
@@ -44,104 +45,14 @@ def reemplazar_manteniendo_formato_estricto(parrafo, datos):
     if 'color' in formato: nuevo_run.font.color.rgb = formato['color']
 
 
-def generar_acta_final():
-    doc = docx.Document("DR_PISTA_Plantilla_Maestra_Etiquetas.docx")
+def generar_acta_final(datos_brutos):
+    # ATENCIÓN: Asegúrate de que el nombre del Word aquí coincide exactamente con el que tienes subido a GitHub
+    ruta_base = os.path.dirname(__file__)
+    ruta_plantilla = os.path.join(ruta_base, "DR_PISTA_Plantilla_Maestra_Etiquetas.docx")
     
-    # Este es el diccionario que te escupe el Gem (sin llaves, no pasa nada)
-    datos_brutos = {
-        "COMPETICION": "IV Os 10000 Peregrinos Deputación da Coruña",
-        "LUGAR": "SANTIAGO DE COMPOSTELA",
-        "DELEGACION": "Santiago",
-        "DIA_SEMANA": "Domingo",
-        "FECHA_DIA": "22",
-        "MES": "Marzo",
-        "ANO": "2026",
-        "NUM_JORNADA": "1",
-        "JORNADA": "Mañana",
-        "OBSERVACIONES": "Se destaca la excelente disposición y colaboración de todos los miembros del equipo arbitral durante el desarrollo de la jornada.",
-        
-        "DIRECTOR_REUNION_NOMBRE": "JULIO RODRÍGUEZ GARCÍA",
-        "DIRECTOR_REUNION_CAT": "N1",
-        "DIRECTOR_REUNION_DEL": "SA",
-        
-        "JUEZ_ARBITRO_NOMBRE": "RODRIGO ESPAÑA PETEIRO",
-        "JUEZ_ARBITRO_CAT": "N2",
-        "JUEZ_ARBITRO_DEL": "SA",
-        
-        "JUEZ_ARBITRO_2_NOMBRE": "MARÍA JOSÉ BARBANZÁN SUEIRO",
-        "JUEZ_ARBITRO_2_CAT": "N2",
-        "JUEZ_ARBITRO_2_DEL": "SA",
-        
-        "DELEGADO_TECNICO_NOMBRE": "ANTÓN NOGUEIRA GONZÁLEZ",
-        "DELEGADO_TECNICO_CAT": "N1",
-        "DELEGADO_TECNICO_DEL": "SA",
-        
-        "JUEZ_DE_SALIDAS_NOMBRE": "MOISES IGLESIAS AMENEIRO",
-        "JUEZ_DE_SALIDAS_CAT": "N1",
-        "JUEZ_DE_SALIDAS_DEL": "SA",
-        
-        "AYUDANTE_DE_SALIDAS_1_NOMBRE": "MANUEL TREUS PAMPÍN",
-        "AYUDANTE_DE_SALIDAS_1_CAT": "N1",
-        "AYUDANTE_DE_SALIDAS_1_DEL": "SA",
-        
-        "JUEZ_JEFE_TRANSPONDEDORES_NOMBRE": "EVA SALVADO PRIETO",
-        "JUEZ_JEFE_TRANSPONDEDORES_CAT": "N3",
-        "JUEZ_JEFE_TRANSPONDEDORES_DEL": "PO",
-        "JUEZ_JEFE_TRANSPONDEDORES_DESP": "X",
-        
-        "JEFE_CRONOMETRAJE_NOMBRE": "EVA SALVADO PRIETO",
-        "JEFE_CRONOMETRAJE_CAT": "N3",
-        "JEFE_CRONOMETRAJE_DEL": "PO",
-        
-        "JUEZ_CRONOMETRAJE_2_NOMBRE": "NEREA IGLESIAS BARBANZÁN",
-        "JUEZ_CRONOMETRAJE_2_CAT": "N1",
-        "JUEZ_CRONOMETRAJE_2_DEL": "SA",
-        
-        "JEFE_LLEGADAS_NOMBRE": "ADRIÁN SESAR MÍGUEZ",
-        "JEFE_LLEGADAS_CAT": "N1",
-        "JEFE_LLEGADAS_DEL": "SA",
-        
-        "JUEZ_DE_LLEGADAS_1_NOMBRE": "AINOA LAGO FERNÁNDEZ",
-        "JUEZ_DE_LLEGADAS_1_CAT": "N1",
-        "JUEZ_DE_LLEGADAS_1_DEL": "SA",
-        
-        "JUEZ_DE_LLEGADAS_2_NOMBRE": "LÍA PEREIRA SEIJO",
-        "JUEZ_DE_LLEGADAS_2_CAT": "N1",
-        "JUEZ_DE_LLEGADAS_2_DEL": "SA",
-        
-        "JUEZ_DE_LLEGADAS_3_NOMBRE": "CINTHIA COSTAS GONZÁLEZ",
-        "JUEZ_DE_LLEGADAS_3_CAT": "N1",
-        "JUEZ_DE_LLEGADAS_3_DEL": "VI",
-        
-        "JEFE_CUENTAVUELTAS_NOMBRE": "ADRIÁN SESAR MÍGUEZ",
-        "JEFE_CUENTAVUELTAS_CAT": "N1",
-        "JEFE_CUENTAVUELTAS_DEL": "SA",
-        
-        "CUENTAVUELTAS_1_NOMBRE": "AINOA LAGO FERNÁNDEZ",
-        "CUENTAVUELTAS_1_CAT": "N1",
-        "CUENTAVUELTAS_1_DEL": "SA",
-        
-        "CUENTAVUELTAS_2_NOMBRE": "LÍA PEREIRA SEIJO",
-        "CUENTAVUELTAS_2_CAT": "N1",
-        "CUENTAVUELTAS_2_DEL": "SA",
-        
-        "CUENTAVUELTAS_3_NOMBRE": "CINTHIA COSTAS GONZÁLEZ",
-        "CUENTAVUELTAS_3_CAT": "N1",
-        "CUENTAVUELTAS_3_DEL": "VI",
-        
-        "JUEZ_DE_RECORRIDO_1_NOMBRE": "VICENTE M. SÁNCHEZ PÉREZ",
-        "JUEZ_DE_RECORRIDO_1_CAT": "N1",
-        "JUEZ_DE_RECORRIDO_1_DEL": "SA",
-        
-        "JUEZ_DE_RECORRIDO_2_NOMBRE": "ÓSCAR TOIMIL PLAZA",
-        "JUEZ_DE_RECORRIDO_2_CAT": "N1",
-        "JUEZ_DE_RECORRIDO_2_DEL": "SA",
-        
-        "SECRETARIA_1": "EMESPORTS"
-    }
-
+    doc = docx.Document(ruta_plantilla)
+    
     # --- ESCUDO CORRECTOR DE LLAVES ---
-    # Transforma automáticamente "COMPETICION" en "{{COMPETICION}}" para que el script no falle
     datos = {}
     for clave, valor in datos_brutos.items():
         if clave.startswith("{{") and clave.endswith("}}"):
@@ -173,7 +84,6 @@ def generar_acta_final():
             texto_fila = "".join(textos_celdas)
             texto_celda_0 = textos_celdas[0].upper() if textos_celdas else ""
             
-            # Si es una fila espaciadora (raya vacía), nos la saltamos en este paso para no borrarla aún
             if not texto_fila:
                 continue
 
@@ -232,12 +142,12 @@ def generar_acta_final():
             textos_celdas = [celda.text.strip() for celda in fila.cells]
             if not "".join(textos_celdas):
                 filas_vacias_consecutivas += 1
-                if filas_vacias_consecutivas > 1: # Si hay más de 1 raya seguida, marcamos para borrar
+                if filas_vacias_consecutivas > 1: 
                     filas_rayas_a_borrar.append(fila)
             else:
                 filas_vacias_consecutivas = 0
 
-        # Si el documento termina en raya vacía, también la quitamos para que el borde se cierre bien
+        # Si el documento termina en raya vacía, también la quitamos
         if tabla.rows:
             textos_celdas_ult = [celda.text.strip() for celda in tabla.rows[-1].cells]
             if not "".join(textos_celdas_ult) and tabla.rows[-1] not in filas_rayas_a_borrar:
@@ -247,47 +157,61 @@ def generar_acta_final():
         for fila in filas_rayas_a_borrar:
             eliminar_fila(fila)
 
-    # 3. Guardado en Word y PDF
+    # 3. Guardado en Word
     nombre_competicion = datos.get("{{COMPETICION}}", "Competicion")
     nombre_limpio = nombre_competicion.replace("/", "-").replace("\\", "-")
-    
     nombre_docx = f"DR_{nombre_limpio}.docx"
-    nombre_pdf = f"DR_{nombre_limpio}.pdf"
     
     doc.save(nombre_docx)
-    print(f"✅ Archivo Word generado: {nombre_docx}")
-
-if __name__ == "__main__":
-    generar_acta_final()
-
-
+    return nombre_docx
 
 
 # ==========================================
-# INTERFAZ WEB DE STREAMLIT (Lo que tú ves)
+# INTERFAZ WEB DE STREAMLIT (Aquí está el "huequito")
 # ==========================================
 
-# 1. Título de la página
 st.title("Generador de Actas FGA 📝")
-st.write("Haz clic en el botón de abajo para procesar los datos y generar el documento.")
+st.write("1. Pega debajo el texto del diccionario que te ha dado la Inteligencia Artificial.")
+st.write("2. Dale a generar y descarga tu Word.")
 
-# 2. Creamos un botón. Todo lo que esté indentado debajo ocurrirá al pulsarlo.
+# AQUÍ ESTÁ EL CUADRO DE TEXTO
+texto_pegado = st.text_area("Pega aquí los datos (Diccionario):", height=300)
+
 if st.button("Generar Acta"):
-    
-    with st.spinner("Generando documento, por favor espera..."):
-        try:
-            # Llamamos a tu función mágica
-            archivo_generado = generar_acta_final()
-            
-            st.success("¡Acta generada con éxito!")
-            
-            # 3. Creamos el botón de descarga para que te baje el Word a tu ordenador
-            with open(archivo_generado, "rb") as file:
-                st.download_button(
-                    label="📥 Descargar Acta en Word",
-                    data=file,
-                    file_name=archivo_generado,
-                    mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document"
-                )
-        except Exception as e:
-            st.error(f"Ocurrió un error: {e}")
+    if not texto_pegado.strip():
+        st.warning("¡Eh! El cuadro de texto está vacío. Pega los datos primero.")
+    else:
+        with st.spinner("Leyendo datos y generando documento..."):
+            try:
+                # Limpiamos espacios raros invisibles
+                texto_limpio = texto_pegado.replace('\xa0', ' ')
+                
+                # Extraemos solo la parte del diccionario {...}
+                inicio = texto_limpio.find('{')
+                fin = texto_limpio.rfind('}') + 1
+                
+                if inicio == -1 or fin == 0:
+                    st.error("No he encontrado ningún diccionario en el texto. Asegúrate de que empiece por '{' y acabe por '}'.")
+                else:
+                    # Convertimos el texto pegado en un diccionario real de Python
+                    texto_diccionario = texto_limpio[inicio:fin]
+                    datos_procesados = ast.literal_eval(texto_diccionario)
+                    
+                    # Llamamos a tu función pasándole los datos
+                    archivo_generado = generar_acta_final(datos_procesados)
+                    
+                    st.success("¡Acta generada con éxito!")
+                    
+                    # Creamos el botón de descarga
+                    with open(archivo_generado, "rb") as file:
+                        st.download_button(
+                            label="📥 Descargar Acta en Word",
+                            data=file,
+                            file_name=archivo_generado,
+                            mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+                        )
+                    
+            except SyntaxError:
+                st.error("Error de formato: El texto que has pegado tiene algún error de sintaxis (falta una coma, unas comillas, etc). Revísalo.")
+            except Exception as e:
+                st.error(f"Error inesperado: {e}")
