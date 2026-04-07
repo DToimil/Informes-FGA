@@ -160,7 +160,7 @@ def generar_acta_final(datos_brutos):
     # 3. Guardado en Word
     nombre_competicion = datos.get("{{COMPETICION}}", "Competicion")
     nombre_limpio = nombre_competicion.replace("/", "-").replace("\\", "-")
-    nombre_docx = f"DR_{nombre_limpio}.docx"
+    nombre_docx = f"DR {nombre_limpio}.docx"
     
     doc.save(nombre_docx)
     return nombre_docx
