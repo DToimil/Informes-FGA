@@ -264,6 +264,7 @@ if tipo_informe != "Elige el tipo de informe":
     
     st.write("2️⃣ Pincha en el siguiente botón para obtener los datos:")
     st.link_button("Abrir la IA para obtener los datos", url_gemini)
+    st.caption("ℹ️ *Una vez en la IA, escríbele 'hola' o pega el mensaje donde indican que fuiste confirmado para esa carrera, ella te guiará en el proceso.*")
     
     st.write("3️⃣ Pega debajo el texto del diccionario que te ha dado la Inteligencia Artificial.")
 
