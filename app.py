@@ -17,13 +17,28 @@ def eliminar_fila(row):
         tr.getparent().remove(tr)
 
 def reemplazar_manteniendo_formato_estricto(parrafo, datos):
-    """Reemplaza los datos copiando TODO el formato original (color, negrita, tamaño)."""
-    texto = parrafo.text
-    if not texto or "{{" not in texto:
+    """Reemplaza los datos conservando exactamente las negritas, colores y cursivas de cada fragmento."""
+    if not parrafo.text or "{{" not in parrafo.text:
         return
 
-    formato = {}
-    if len(parrafo.runs) > 0:
+    # 1. INTENTO PRINCIPAL: Reemplazar fragmento por fragmento (Run por Run)
+    # Esto es lo que permite que "Nombre:" siga en negrita y el dato "{{NOMBRE}}" en texto normal.
+    for run in parrafo.runs:
+        for clave, valor in datos.items():
+            if clave in run.text:
+                run.text = run.text.replace(clave, str(valor))
+        
+        # Limpiamos las etiquetas vacías que hayan quedado dentro de este run
+        run.text = re.sub(r"\{\{.*?\}\}", "", run.text)
+
+    # 2. PLAN B (Salvavidas por si Word ha roto la etiqueta en varios trozos)
+    # A veces Word divide una etiqueta (ej. run1="{{" y run2="DATO}}"). Si eso pasa, 
+    # el paso anterior no la detecta. Aquí reconstruimos el párrafo completo intentando rescatar
+    # el formato principal para que no falten datos en el informe.
+    if "{{" in parrafo.text:
+        texto_completo = parrafo.text
+        
+        formato = {}
         for run in parrafo.runs:
             if run.text.strip():
                 formato['name'] = run.font.name
@@ -34,21 +49,20 @@ def reemplazar_manteniendo_formato_estricto(parrafo, datos):
                     formato['color'] = run.font.color.rgb
                 break
 
-    for clave, valor in datos.items():
-        if clave in texto:
-            texto = texto.replace(clave, str(valor))
-            
-    # Limpia cualquier etiqueta {{ALGO}} que haya quedado sin rellenar
-    texto = re.sub(r"\{\{.*?\}\}", "", texto)
+        for clave, valor in datos.items():
+            if clave in texto_completo:
+                texto_completo = texto_completo.replace(clave, str(valor))
+                
+        texto_completo = re.sub(r"\{\{.*?\}\}", "", texto_completo)
 
-    parrafo.clear()
-    nuevo_run = parrafo.add_run(texto)
-    
-    if 'name' in formato and formato['name']: nuevo_run.font.name = formato['name']
-    if 'size' in formato and formato['size']: nuevo_run.font.size = formato['size']
-    if 'bold' in formato and formato['bold'] is not None: nuevo_run.font.bold = formato['bold']
-    if 'italic' in formato and formato['italic'] is not None: nuevo_run.font.italic = formato['italic']
-    if 'color' in formato: nuevo_run.font.color.rgb = formato['color']
+        parrafo.clear()
+        nuevo_run = parrafo.add_run(texto_completo)
+        
+        if 'name' in formato and formato['name']: nuevo_run.font.name = formato['name']
+        if 'size' in formato and formato['size']: nuevo_run.font.size = formato['size']
+        if 'bold' in formato and formato['bold'] is not None: nuevo_run.font.bold = formato['bold']
+        if 'italic' in formato and formato['italic'] is not None: nuevo_run.font.italic = formato['italic']
+        if 'color' in formato: nuevo_run.font.color.rgb = formato['color']
 
 def activar_checkbox_por_posicion(doc, indice_real, activar=True):
     """Activa o desactiva los cuadraditos grises de Word por su orden de aparición."""
@@ -238,54 +252,55 @@ st.write("Sigue los pasos para generar el documento oficial en Word:")
 # 1. Menú desplegable para elegir el tipo de informe
 tipo_informe = st.selectbox(
     "1️⃣ Selecciona el tipo de informe que quieres generar:",
-    ["Director de Reunión ( Ruta )", "Juez Jefe de Transpondedor (JJT)"]
+    ["Elige el tipo de informe", "Director de Reunión ( Ruta )", "Juez Jefe de Transpondedor (JJT)"]
 )
 
-st.write("2️⃣ Pega debajo el texto del diccionario que te ha dado la Inteligencia Artificial.")
+if tipo_informe != "Elige el tipo de informe":
+    st.write("2️⃣ Pega debajo el texto del diccionario que te ha dado la Inteligencia Artificial.")
 
-# 2. Cuadro de texto
-texto_pegado = st.text_area("Pega aquí los datos (Diccionario):", height=300)
+    # 2. Cuadro de texto
+    texto_pegado = st.text_area("Pega aquí los datos (Diccionario):", height=300)
 
-# 3. Botón de generación
-if st.button("3️⃣ Generar Informe"):
-    if not texto_pegado.strip():
-        st.warning("¡El cuadro de texto está vacío! Pega los datos primero.")
-    else:
-        with st.spinner(f"Generando informe de {tipo_informe}..."):
-            try:
-                # Limpiamos espacios raros invisibles
-                texto_limpio = texto_pegado.replace('\xa0', ' ')
-                
-                # Extraemos solo la parte del diccionario {...}
-                inicio = texto_limpio.find('{')
-                fin = texto_limpio.rfind('}') + 1
-                
-                if inicio == -1 or fin == 0:
-                    st.error("No he encontrado ningún diccionario en el texto. Asegúrate de que empiece por '{' y acabe por '}'.")
-                else:
-                    texto_diccionario = texto_limpio[inicio:fin]
-                    datos_procesados = ast.literal_eval(texto_diccionario)
+    # 3. Botón de generación
+    if st.button("3️⃣ Generar Informe"):
+        if not texto_pegado.strip():
+            st.warning("¡El cuadro de texto está vacío! Pega los datos primero.")
+        else:
+            with st.spinner(f"Generando informe de {tipo_informe}..."):
+                try:
+                    # Limpiamos espacios raros invisibles
+                    texto_limpio = texto_pegado.replace('\xa0', ' ')
                     
-                    # Decidimos a qué función llamar según el desplegable
-                    if tipo_informe == "Director de Reunión (Ruta / Pista)":
-                        archivo_generado = generar_acta_dr(datos_procesados)
-                    elif tipo_informe == "Juez Jefe de Transpondedor (JJT)":
-                        archivo_generado = generar_acta_jjt(datos_procesados)
+                    # Extraemos solo la parte del diccionario {...}
+                    inicio = texto_limpio.find('{')
+                    fin = texto_limpio.rfind('}') + 1
                     
-                    st.success(f"¡{tipo_informe} generado con éxito!")
-                    
-                    # Creamos el botón de descarga
-                    with open(archivo_generado, "rb") as file:
-                        st.download_button(
-                            label="📥 Descargar Documento en Word",
-                            data=file,
-                            file_name=archivo_generado,
-                            mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document"
-                        )
-                    
-            except SyntaxError:
-                st.error("Error de formato: El texto que has pegado tiene algún error de sintaxis (falta una coma, unas comillas, etc). Revísalo.")
-            except FileNotFoundError:
-                st.error("Error: No se encuentra la plantilla en el servidor. Asegúrate de que el archivo .docx está subido a GitHub con el nombre correcto.")
-            except Exception as e:
-                st.error(f"Error inesperado: {e}")
+                    if inicio == -1 or fin == 0:
+                        st.error("No he encontrado ningún diccionario en el texto. Asegúrate de que empiece por '{' y acabe por '}'.")
+                    else:
+                        texto_diccionario = texto_limpio[inicio:fin]
+                        datos_procesados = ast.literal_eval(texto_diccionario)
+                        
+                        # Decidimos a qué función llamar según el desplegable
+                        if tipo_informe == "Director de Reunión ( Ruta )":
+                            archivo_generado = generar_acta_dr(datos_procesados)
+                        elif tipo_informe == "Juez Jefe de Transpondedor (JJT)":
+                            archivo_generado = generar_acta_jjt(datos_procesados)
+                        
+                        st.success(f"¡{tipo_informe} generado con éxito!")
+                        
+                        # Creamos el botón de descarga
+                        with open(archivo_generado, "rb") as file:
+                            st.download_button(
+                                label="📥 Descargar Documento en Word",
+                                data=file,
+                                file_name=archivo_generado,
+                                mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+                            )
+                        
+                except SyntaxError:
+                    st.error("Error de formato: El texto que has pegado tiene algún error de sintaxis (falta una coma, unas comillas, etc). Revísalo.")
+                except FileNotFoundError:
+                    st.error("Error: No se encuentra la plantilla en el servidor. Asegúrate de que el archivo .docx está subido a GitHub con el nombre correcto.")
+                except Exception as e:
+                    st.error(f"Error inesperado: {e}")
