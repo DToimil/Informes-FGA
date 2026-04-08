@@ -262,7 +262,8 @@ if tipo_informe != "Elige el tipo de informe":
     else:
         url_gemini = "https://gemini.google.com/gem/1evM9tdpvflf129mCAu7J6TBViiDE7PaL?usp=sharing"
     
-    st.link_button("2️⃣ Abrir la IA para obtener los datos", url_gemini)
+    st.write("2️⃣ Pincha en el siguiente botón para obtener los datos:")
+    st.link_button("Abrir la IA para obtener los datos", url_gemini)
     
     st.write("3️⃣ Pega debajo el texto del diccionario que te ha dado la Inteligencia Artificial.")
 
