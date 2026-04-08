@@ -191,7 +191,7 @@ def generar_acta_dr(datos_brutos):
 
     nombre_competicion = datos.get("{{COMPETICION}}", "Competicion")
     nombre_limpio = nombre_competicion.replace("/", "-").replace("\\", "-")
-    nombre_docx = f"DR_{nombre_limpio}.docx"
+    nombre_docx = f"DR {nombre_limpio}.docx"
     doc.save(nombre_docx)
     return nombre_docx
 
@@ -235,7 +235,7 @@ def generar_acta_jjt(datos_brutos):
 
     nombre_competicion = datos_texto.get("{{COMPETICION}}", "Informe_XXT").strip()
     nombre_limpio = nombre_competicion.replace("/", "-").replace("\\", "-")
-    nombre_docx = f"JJT_{nombre_limpio}.docx"
+    nombre_docx = f"JJT {nombre_limpio}.docx"
     doc.save(nombre_docx)
     return nombre_docx
 
@@ -252,17 +252,25 @@ st.write("Sigue los pasos para generar el documento oficial en Word:")
 # 1. Menú desplegable para elegir el tipo de informe
 tipo_informe = st.selectbox(
     "1️⃣ Selecciona el tipo de informe que quieres generar:",
-    ["Elige el tipo de informe", "Director de Reunión ( Ruta )", "Juez Jefe de Transpondedor (JJT)"]
+    ["Elige el tipo de informe", "Director de Reunión (Ruta)", "Juez Jefe de Transpondedor (JJT)"]
 )
 
 if tipo_informe != "Elige el tipo de informe":
-    st.write("2️⃣ Pega debajo el texto del diccionario que te ha dado la Inteligencia Artificial.")
+    # Nuevo Paso 2: Enlace a Gemini
+    if tipo_informe == "Juez Jefe de Transpondedor (JJT)":
+        url_gemini = "https://gemini.google.com/gem/196pc9YorHovWvxJRP3VHzdvL5kuMkHV1?usp=sharing"
+    else:
+        url_gemini = "https://gemini.google.com/gem/1evM9tdpvflf129mCAu7J6TBViiDE7PaL?usp=sharing"
+    
+    st.link_button("2️⃣ Abrir la IA para obtener los datos", url_gemini)
+    
+    st.write("3️⃣ Pega debajo el texto del diccionario que te ha dado la Inteligencia Artificial.")
 
-    # 2. Cuadro de texto
+    # 3. Cuadro de texto
     texto_pegado = st.text_area("Pega aquí los datos (Diccionario):", height=300)
 
-    # 3. Botón de generación
-    if st.button("3️⃣ Generar Informe"):
+    # 4. Botón de generación
+    if st.button("4️⃣ Generar Informe"):
         if not texto_pegado.strip():
             st.warning("¡El cuadro de texto está vacío! Pega los datos primero.")
         else:
@@ -282,7 +290,7 @@ if tipo_informe != "Elige el tipo de informe":
                         datos_procesados = ast.literal_eval(texto_diccionario)
                         
                         # Decidimos a qué función llamar según el desplegable
-                        if tipo_informe == "Director de Reunión ( Ruta )":
+                        if tipo_informe == "Director de Reunión (Ruta)":
                             archivo_generado = generar_acta_dr(datos_procesados)
                         elif tipo_informe == "Juez Jefe de Transpondedor (JJT)":
                             archivo_generado = generar_acta_jjt(datos_procesados)
