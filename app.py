@@ -238,7 +238,7 @@ st.write("Sigue los pasos para generar el documento oficial en Word:")
 # 1. Menú desplegable para elegir el tipo de informe
 tipo_informe = st.selectbox(
     "1️⃣ Selecciona el tipo de informe que quieres generar:",
-    ["Director de Reunión (Ruta / Pista)", "Juez Jefe de Transpondedor (JJT)"]
+    ["Director de Reunión ( Ruta )", "Juez Jefe de Transpondedor (JJT)"]
 )
 
 st.write("2️⃣ Pega debajo el texto del diccionario que te ha dado la Inteligencia Artificial.")
