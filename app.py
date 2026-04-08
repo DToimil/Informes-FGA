@@ -3,6 +3,12 @@ import docx
 import re
 import os
 import ast
+from docx.oxml.ns import qn
+from docx.oxml import OxmlElement
+
+# ==========================================
+# FUNCIONES AUXILIARES COMUNES
+# ==========================================
 
 def eliminar_fila(row):
     """Elimina la fila limpiamente desde el código XML de Word."""
@@ -44,12 +50,31 @@ def reemplazar_manteniendo_formato_estricto(parrafo, datos):
     if 'italic' in formato and formato['italic'] is not None: nuevo_run.font.italic = formato['italic']
     if 'color' in formato: nuevo_run.font.color.rgb = formato['color']
 
+def activar_checkbox_por_posicion(doc, indice_real, activar=True):
+    """Activa o desactiva los cuadraditos grises de Word por su orden de aparición."""
+    checkboxes = doc.element.xpath('.//w:checkBox')
+    if indice_real < len(checkboxes):
+        cb = checkboxes[indice_real]
+        valor = "1" if activar else "0"
+        
+        default_val = cb.find(qn('w:default'))
+        if default_val is not None:
+            default_val.set(qn('w:val'), valor)
+            
+        checked_val = cb.find(qn('w:checked'))
+        if checked_val is None:
+            checked_val = OxmlElement('w:checked')
+            cb.append(checked_val)
+        checked_val.set(qn('w:val'), valor)
 
-def generar_acta_final(datos_brutos):
-    # ATENCIÓN: Asegúrate de que el nombre del Word aquí coincide exactamente con el que tienes subido a GitHub
+
+# ==========================================
+# GENERADOR: DIRECTOR DE REUNIÓN
+# ==========================================
+
+def generar_acta_dr(datos_brutos):
     ruta_base = os.path.dirname(__file__)
     ruta_plantilla = os.path.join(ruta_base, "DR_PISTA_Plantilla_Maestra_Etiquetas.docx")
-    
     doc = docx.Document(ruta_plantilla)
     
     # --- ESCUDO CORRECTOR DE LLAVES ---
@@ -59,13 +84,12 @@ def generar_acta_final(datos_brutos):
             datos[clave] = valor
         else:
             datos[f"{{{{{clave}}}}}"] = valor
-    # ----------------------------------
 
     # 1. Cabecera y textos sueltos
     for parrafo in doc.paragraphs:
         reemplazar_manteniendo_formato_estricto(parrafo, datos)
 
-    # 2. Tablas
+    # 2. Tablas (Limpieza de jueces vacíos)
     secciones_conocidas = [
         "CÁMARA DE LLAMADAS", "SALIDAS", "CRONOMETRAJE TRANSP.", 
         "CRONOMETRAJE MANUAL", "LLEGADAS", "CUENTAVUELTAS", 
@@ -78,7 +102,6 @@ def generar_acta_final(datos_brutos):
         cabecera_actual = None
         seccion_con_datos = False
         
-        # PASO 1: Identificar sobrantes (jueces vacíos y cabeceras inútiles) y rellenar datos
         for fila in tabla.rows:
             textos_celdas = [celda.text.strip() for celda in fila.cells]
             texto_fila = "".join(textos_celdas)
@@ -122,7 +145,6 @@ def generar_acta_final(datos_brutos):
                     else:
                         seccion_con_datos = True
 
-            # Si la fila es útil y se va a quedar, le escribimos los datos
             for celda in fila.cells:
                 for parrafo in celda.paragraphs:
                     reemplazar_manteniendo_formato_estricto(parrafo, datos)
@@ -130,11 +152,9 @@ def generar_acta_final(datos_brutos):
         if cabecera_actual is not None and not seccion_con_datos:
             filas_a_borrar.append(cabecera_actual)
 
-        # Destruimos todo lo inútil
         for fila in filas_a_borrar:
             eliminar_fila(fila)
 
-        # PASO 2: Limpieza Quirúrgica de "rayas"
         filas_vacias_consecutivas = 0
         filas_rayas_a_borrar = []
 
@@ -147,41 +167,91 @@ def generar_acta_final(datos_brutos):
             else:
                 filas_vacias_consecutivas = 0
 
-        # Si el documento termina en raya vacía, también la quitamos
         if tabla.rows:
             textos_celdas_ult = [celda.text.strip() for celda in tabla.rows[-1].cells]
             if not "".join(textos_celdas_ult) and tabla.rows[-1] not in filas_rayas_a_borrar:
                 filas_rayas_a_borrar.append(tabla.rows[-1])
 
-        # Destruimos las rayas duplicadas
         for fila in filas_rayas_a_borrar:
             eliminar_fila(fila)
 
-    # 3. Guardado en Word
     nombre_competicion = datos.get("{{COMPETICION}}", "Competicion")
     nombre_limpio = nombre_competicion.replace("/", "-").replace("\\", "-")
-    nombre_docx = f"DR {nombre_limpio}.docx"
-    
+    nombre_docx = f"DR_{nombre_limpio}.docx"
     doc.save(nombre_docx)
     return nombre_docx
 
 
 # ==========================================
-# INTERFAZ WEB DE STREAMLIT (Aquí está el "huequito")
+# GENERADOR: JUEZ JEFE TRANSPONDEDOR
 # ==========================================
 
-st.title("Generador de Actas FGA 📝")
-st.write("1. Pega debajo el texto del diccionario que te ha dado la Inteligencia Artificial.")
-st.write("2. Dale a generar y descarga tu Word.")
+def generar_acta_jjt(datos_brutos):
+    ruta_base = os.path.dirname(__file__)
+    ruta_plantilla = os.path.join(ruta_base, "JJT_PLANTILLA_MAESTRA_DEFINITIVA.docx")
+    doc = docx.Document(ruta_plantilla)
+    
+    datos_texto = {}
+    estado_cuadraditos = {}
+    
+    # SEPARADOR: Textos vs Cuadraditos dinámicos
+    for clave, valor in datos_brutos.items():
+        if clave.startswith("CHECK_"):
+            num = int(clave.replace("CHECK_", ""))
+            estado_cuadraditos[num] = valor
+        else:
+            if clave.startswith("{{") and clave.endswith("}}"):
+                datos_texto[clave] = valor
+            else:
+                datos_texto[f"{{{{{clave}}}}}"] = valor
 
-# AQUÍ ESTÁ EL CUADRO DE TEXTO
+    # 1. Reemplazar texto
+    for parrafo in doc.paragraphs:
+        reemplazar_manteniendo_formato_estricto(parrafo, datos_texto)
+        
+    for tabla in doc.tables:
+        for fila in tabla.rows:
+            for celda in fila.cells:
+                for parrafo in celda.paragraphs:
+                    reemplazar_manteniendo_formato_estricto(parrafo, datos_texto)
+
+    # 2. Marcar cuadraditos
+    for posicion, estado in estado_cuadraditos.items():
+        activar_checkbox_por_posicion(doc, posicion, activar=estado)
+
+    nombre_competicion = datos_texto.get("{{COMPETICION}}", "Informe_XXT").strip()
+    nombre_limpio = nombre_competicion.replace("/", "-").replace("\\", "-")
+    nombre_docx = f"JJT_{nombre_limpio}.docx"
+    doc.save(nombre_docx)
+    return nombre_docx
+
+
+# ==========================================
+# INTERFAZ WEB DE STREAMLIT
+# ==========================================
+
+st.set_page_config(page_title="Generador de Actas FGA", page_icon="📝")
+
+st.title("Generador de Actas FGA 📝")
+st.write("Sigue los pasos para generar el documento oficial en Word:")
+
+# 1. Menú desplegable para elegir el tipo de informe
+tipo_informe = st.selectbox(
+    "1️⃣ Selecciona el tipo de informe que quieres generar:",
+    ["Director de Reunión (Ruta / Pista)", "Juez Jefe de Transpondedor (JJT)"]
+)
+
+st.write("2️⃣ Pega debajo el texto del diccionario que te ha dado la Inteligencia Artificial.")
+
+# 2. Cuadro de texto
 texto_pegado = st.text_area("Pega aquí los datos (Diccionario):", height=300)
 
-if st.button("Generar Acta"):
+# 3. Botón de generación
+if st.button("3️⃣ Generar Informe"):
     if not texto_pegado.strip():
-        st.warning("¡Eh! El cuadro de texto está vacío. Pega los datos primero.")
+        st.warning("¡El cuadro de texto está vacío! Pega los datos primero.")
     else:
-        with st.spinner("Leyendo datos y generando documento..."):
+        with st.spinner(f"Generando informe de {tipo_informe}..."):
             try:
                 # Limpiamos espacios raros invisibles
                 texto_limpio = texto_pegado.replace('\xa0', ' ')
@@ -193,19 +263,21 @@ if st.button("Generar Acta"):
                 if inicio == -1 or fin == 0:
                     st.error("No he encontrado ningún diccionario en el texto. Asegúrate de que empiece por '{' y acabe por '}'.")
                 else:
-                    # Convertimos el texto pegado en un diccionario real de Python
                     texto_diccionario = texto_limpio[inicio:fin]
                     datos_procesados = ast.literal_eval(texto_diccionario)
                     
-                    # Llamamos a tu función pasándole los datos
-                    archivo_generado = generar_acta_final(datos_procesados)
+                    # Decidimos a qué función llamar según el desplegable
+                    if tipo_informe == "Director de Reunión (Ruta / Pista)":
+                        archivo_generado = generar_acta_dr(datos_procesados)
+                    elif tipo_informe == "Juez Jefe de Transpondedor (JJT)":
+                        archivo_generado = generar_acta_jjt(datos_procesados)
                     
-                    st.success("¡Acta generada con éxito!")
+                    st.success(f"¡{tipo_informe} generado con éxito!")
                     
                     # Creamos el botón de descarga
                     with open(archivo_generado, "rb") as file:
                         st.download_button(
-                            label="📥 Descargar Acta en Word",
+                            label="📥 Descargar Documento en Word",
                             data=file,
                             file_name=archivo_generado,
                             mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document"
@@ -213,5 +285,7 @@ if st.button("Generar Acta"):
                     
             except SyntaxError:
                 st.error("Error de formato: El texto que has pegado tiene algún error de sintaxis (falta una coma, unas comillas, etc). Revísalo.")
+            except FileNotFoundError:
+                st.error("Error: No se encuentra la plantilla en el servidor. Asegúrate de que el archivo .docx está subido a GitHub con el nombre correcto.")
             except Exception as e:
                 st.error(f"Error inesperado: {e}")
